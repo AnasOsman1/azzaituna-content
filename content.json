@@ -27,6 +27,24 @@
   ],
   "announcements": [
     {
+      "updated_at": "2026-10-27T00:00:00.000Z",
+      "id": "conference-names-of-allah",
+      "mosque_id": "azzaituna",
+      "title_ar": "التعبد بالأسماء الحسنى",
+      "title_it": "L'adorazione di Allah attraverso i Suoi Nomi più belli",
+      "title_en": "Worship of Allah through His Most Beautiful Names",
+      "body_ar": "محاضرة يقدّمها فضيلة الشيخ د. عبده محمد الدغار في مقر المركز، شارع دلي غياي 22، ترنتو. الدعوة عامة، وشاي وضيافة بعد المحاضرة.",
+      "body_it": "Conferenza del Dr. Abduh Muhammad Al-Daghar presso il centro, Via delle Ghiaie 22, Trento. Ingresso libero, tè al termine. Tutti sono i benvenuti.",
+      "body_en": "A lecture by Dr. Abduh Muhammad Al-Daghar at the centre, Via delle Ghiaie 22, Trento. Open to all, with tea afterwards.",
+      "priority": "normal",
+      "starts_at": "2026-10-27T00:00:00.000Z",
+      "expires_at": "2026-10-29T23:00:00.000Z",
+      "published_at": "2026-10-27T00:00:00.000Z",
+      "image_url": "https://raw.githubusercontent.com/AnasOsman1/azzaituna-content/main/images/conference-names-of-allah.jpg",
+      "image_width": 1080,
+      "image_height": 1526
+    },
+    {
       "updated_at": "2026-10-26T00:00:00.000Z",
       "id": "welcome",
       "mosque_id": "azzaituna",
