@@ -67,7 +67,7 @@ jobs:
           node-version: 22
       - name: Restore send ledger for this commit
         if: env.DRY_RUN == '0'
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: fcm-ledger
           key: fcm-sent-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -79,7 +79,7 @@ jobs:
         run: node .github/scripts/send-push.mjs
       - name: Save send ledger
         if: always() && env.DRY_RUN == '0' && hashFiles('fcm-ledger/sent.json') != ''
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: fcm-ledger
           key: fcm-sent-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
