@@ -1,0 +1,85 @@
+name: Content
+
+# validate: on every PR and push that touches content or these scripts.
+# push:     after validate passes, on pushes to main (and manual runs) sends an FCM
+#           notification for each announcement that is new in the push and active now.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - content.json
+      - .github/scripts/**
+      - .github/workflows/content.yml
+  pull_request:
+    paths:
+      - content.json
+      - .github/scripts/**
+      - .github/workflows/content.yml
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Dry run (print the messages, send nothing)
+        type: boolean
+        default: true
+      before:
+        description: Commit to diff against (default = parent of the current commit)
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Unit tests
+        run: node --test .github/scripts/send-push.test.mjs
+      - name: Validate content.json
+        run: node .github/scripts/validate-content.mjs content.json
+
+  push:
+    needs: validate
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Never run two senders for the same commit at once (re-runs queue behind each other).
+    concurrency:
+      group: fcm-push-${{ github.sha }}
+      cancel-in-progress: false
+    env:
+      # Live only for pushes to main, or a manual run on main with dry_run unticked.
+      DRY_RUN: ${{ ((github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run)) && github.ref == 'refs/heads/main') && '0' || '1' }}
+      FCM_LEDGER_PATH: fcm-ledger/sent.json
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # needs the previous commit to diff content.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Restore send ledger for this commit
+        if: env.DRY_RUN == '0'
+        uses: actions/cache/restore@v4
+        with:
+          path: fcm-ledger
+          key: fcm-sent-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: fcm-sent-${{ github.sha }}-
+      - name: Send push notifications
+        env:
+          BEFORE_SHA: ${{ github.event_name == 'push' && github.event.before || inputs.before || 'HEAD^' }}
+          FCM_SERVICE_ACCOUNT_JSON: ${{ env.DRY_RUN == '0' && secrets.FCM_SERVICE_ACCOUNT_JSON || '' }}
+        run: node .github/scripts/send-push.mjs
+      - name: Save send ledger
+        if: always() && env.DRY_RUN == '0' && hashFiles('fcm-ledger/sent.json') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: fcm-ledger
+          key: fcm-sent-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
