@@ -47,6 +47,21 @@ cannot read is dropped silently, and some mistakes (a `null` row, a missing date
   for the same prayer and season/date are rejected (the app would keep only one).
 - **jumuahSessions**: `khutbah` and `iqamah` are `HH:MM`; `sort` an integer.
 
+### Isha (or any prayer): automatic or set
+
+The iqamah of a prayer follows its rule in `iqamahRules`; edit that row to switch:
+
+- **Automatic** (follows the adhan, which the app calculates): `"rule_type": "offset"` with
+  `"minutes": 5` (adhan + 5 min), `"fixed_time": null`. Optional `round` (round up to a multiple
+  of N minutes), `not_before` / `not_after` (`HH:MM`) to clamp it.
+- **Set** (same clock time every day): `"rule_type": "fixed"`, `"fixed_time": "19:30"`,
+  `"minutes": null`. If the set time falls before the adhan on some day, the app shows adhan + 5.
+
+To change it only for part of the year, add a second row for the same prayer with
+`season_from` / `season_to` (`MM-DD`), or for one day with `on_date` (`YYYY-MM-DD`). Those rows
+win over the base row (`isha-base`) in their dates. Commit, and phones pick it up within about
+five minutes of opening the app.
+
 Every value the scripts print in the Actions log is JSON-escaped and shortened, so text in
 `content.json` can never inject workflow commands (`::add-mask::`, `::warning::`, ...).
 
