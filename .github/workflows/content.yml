@@ -2,7 +2,8 @@ name: Content
 
 # validate: on every PR and push that touches content or these scripts.
 # push:     after validate passes, on pushes to main (and manual runs) sends an FCM
-#           notification for each announcement that is new in the push and active now.
+#           notification for each active announcement published in the last 48 h that the
+#           send ledger has not recorded yet. See README.md.
 
 on:
   push:
@@ -23,7 +24,7 @@ on:
         type: boolean
         default: true
       before:
-        description: Commit to diff against (default = parent of the current commit)
+        description: Commit used only when the send ledger is missing (default = parent of the current commit)
         type: string
         required: false
         default: ''
@@ -37,11 +38,17 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v5
         with:
           node-version: 22
       - name: Unit tests
-        run: node --test .github/scripts/send-push.test.mjs
+        run: >-
+          node --test
+          .github/scripts/send-push.test.mjs
+          .github/scripts/send-push.hardening.test.mjs
+          .github/scripts/validate-content.test.mjs
       - name: Validate content.json
         run: node .github/scripts/validate-content.mjs content.json
 
@@ -49,37 +56,45 @@ jobs:
     needs: validate
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    # Never run two senders for the same commit at once (re-runs queue behind each other).
+    # Up to ~6 min waiting for the public content.json, plus sending.
+    timeout-minutes: 15
+    # One sender at a time across ALL commits: the ledger is shared, so two runs must never
+    # read it at the same time (re-runs and later pushes queue behind the running one).
     concurrency:
-      group: fcm-push-${{ github.sha }}
+      group: fcm-push
       cancel-in-progress: false
     env:
       # Live only for pushes to main, or a manual run on main with dry_run unticked.
       DRY_RUN: ${{ ((github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run)) && github.ref == 'refs/heads/main') && '0' || '1' }}
       FCM_LEDGER_PATH: fcm-ledger/sent.json
+      BEFORE_SHA: ${{ github.event_name == 'push' && github.event.before || inputs.before || 'HEAD^' }}
     steps:
       - uses: actions/checkout@v5
         with:
-          fetch-depth: 0 # needs the previous commit to diff content.json
+          fetch-depth: 0 # a cold start reads content.json at the previous commit
+          persist-credentials: false
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - name: Restore send ledger for this commit
-        if: env.DRY_RUN == '0'
+      # The newest saved ledger (restore-keys picks the most recent match). A dry run reads it
+      # too, so it shows what a live run would send, but never saves it.
+      - name: Restore send ledger
         uses: actions/cache/restore@v5
         with:
           path: fcm-ledger
-          key: fcm-sent-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: fcm-sent-${{ github.sha }}-
+          key: fcm-ledger-v2-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: fcm-ledger-v2-
+      - name: Show what would be sent (dry run)
+        if: env.DRY_RUN != '0'
+        run: node .github/scripts/send-push.mjs
       - name: Send push notifications
+        if: env.DRY_RUN == '0' && github.ref == 'refs/heads/main'
         env:
-          BEFORE_SHA: ${{ github.event_name == 'push' && github.event.before || inputs.before || 'HEAD^' }}
-          FCM_SERVICE_ACCOUNT_JSON: ${{ env.DRY_RUN == '0' && secrets.FCM_SERVICE_ACCOUNT_JSON || '' }}
+          FCM_SERVICE_ACCOUNT_JSON: ${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}
         run: node .github/scripts/send-push.mjs
       - name: Save send ledger
         if: always() && env.DRY_RUN == '0' && hashFiles('fcm-ledger/sent.json') != ''
         uses: actions/cache/save@v5
         with:
           path: fcm-ledger
-          key: fcm-sent-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: fcm-ledger-v2-${{ github.run_id }}-${{ github.run_attempt }}

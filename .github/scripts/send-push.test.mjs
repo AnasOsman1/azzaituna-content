@@ -22,10 +22,15 @@ import {
 import { parseContent, validateContent } from './validate-content.mjs';
 
 const NOW = new Date('2026-10-27T12:00:00Z');
+// Within the 48 h send window of NOW.
+const RECENT = '2026-10-27T00:00:00Z';
+const tables = (announcements) => ({ lessons: [], announcements, adhkar: [], iqamahRules: [], jumuahSessions: [] });
 
 function ann(id, over = {}) {
   return {
     id,
+    mosque_id: 'azzaituna',
+    updated_at: '2026-10-01T00:00:00Z',
     title_ar: `عنوان ${id}`,
     title_it: `Titolo ${id}`,
     title_en: `Title ${id}`,
@@ -146,7 +151,7 @@ test('truncate counts code points (Arabic and emoji are not split)', () => {
   assert.ok(!/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/.test(e), 'no lone high surrogate');
 });
 
-test('buildMessages truncates long bodies but not titles', () => {
+test('buildMessages truncates long bodies', () => {
   const m = buildMessages(ann('x', { body_en: 'w '.repeat(200) }))[2];
   assert.ok(Array.from(m.notification.body).length <= 140);
 });
@@ -160,23 +165,21 @@ test('parseContent fails loudly on invalid JSON and on non-object roots', () => 
 });
 
 test('validateContent accepts complete announcements', () => {
-  assert.deepEqual(validateContent({ announcements: [ann('a'), ann('b')] }), []);
-  const withImage = ann('c', { image_url: 'https://example.org/p.jpg', image_width: 10, image_height: 20 });
-  assert.deepEqual(validateContent({ announcements: [withImage] }), []);
+  assert.deepEqual(validateContent(tables([ann('a'), ann('b')])), []);
+  const withImage = ann('c', { image_url: 'https://raw.githubusercontent.com/AnasOsman1/azzaituna-content/main/images/p.jpg', image_width: 10, image_height: 20 });
+  assert.deepEqual(validateContent(tables([withImage])), []);
 });
 
 test('validateContent reports missing text fields, bad image_url, duplicates', () => {
   const bad = ann('a', { body_it: '  ' });
   delete bad.title_ar;
-  const errs = validateContent({
-    announcements: [
+  const errs = validateContent(tables([
       bad,
       ann('a'),
       ann('h', { image_url: 'http://example.org/p.jpg', image_width: 1, image_height: 1 }),
       ann('s', { image_url: 'https://example.org/a b.jpg', image_width: 1, image_height: 1 }),
       ann('p', { priority: 'high' }),
-    ],
-  });
+  ]));
   const text = errs.join('\n');
   assert.match(text, /"title_ar"/);
   assert.match(text, /"body_it"/);
@@ -187,7 +190,7 @@ test('validateContent reports missing text fields, bad image_url, duplicates', (
 });
 
 test('validateContent requires an announcements array', () => {
-  assert.deepEqual(validateContent({}), ['"announcements" must be an array']);
+  assert.ok(validateContent({}).includes('"announcements" must be an array'));
 });
 
 test('the real content.json is valid', async () => {
@@ -245,7 +248,7 @@ const prev = { announcements: [ann('old')] };
 const curr = {
   announcements: [
     ann('old'),
-    ann('new1'),
+    ann('new1', { published_at: RECENT }),
     ann('future', { starts_at: '2026-12-01T00:00:00Z' }),
     ann('expired', { expires_at: '2026-10-01T00:00:01Z' }),
   ],
@@ -308,7 +311,7 @@ test('5xx is retried', async () => {
     n += 1;
     return n === 1 ? { status: 503, body: 'unavailable' } : { body: { name: 'n' } };
   });
-  const r = await run({ previous: prev, current: { announcements: [ann('old'), ann('z')] }, now: NOW, dryRun: false, serviceAccountJson: JSON.stringify(SA), fetchImpl: f, log: quiet, retryDelayMs: 1 });
+  const r = await run({ previous: prev, current: { announcements: [ann('old'), ann('z', { published_at: RECENT })] }, now: NOW, dryRun: false, serviceAccountJson: JSON.stringify(SA), fetchImpl: f, log: quiet, retryDelayMs: 1 });
   assert.equal(r.sent.length, 3);
   assert.equal(r.failed.length, 0);
 });
