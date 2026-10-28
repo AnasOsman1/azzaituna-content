@@ -52,15 +52,17 @@ cannot read is dropped silently, and some mistakes (a `null` row, a missing date
 The iqamah of a prayer follows its rule in `iqamahRules`; edit that row to switch:
 
 - **Automatic** (follows the adhan, which the app calculates): `"rule_type": "offset"` with
-  `"minutes": 5` (adhan + 5 min), `"fixed_time": null`. Optional `round` (round up to a multiple
-  of N minutes), `not_before` / `not_after` (`HH:MM`) to clamp it.
+  `"minutes": 5` (adhan + 5 min), `"fixed_time": null`. Optional `round` (round to the nearest
+  multiple of N minutes, as the app does), `not_before` / `not_after` (`HH:MM`) to clamp it.
 - **Set** (same clock time every day): `"rule_type": "fixed"`, `"fixed_time": "19:30"`,
   `"minutes": null`. If the set time falls before the adhan on some day, the app shows adhan + 5.
 
 To change it only for part of the year, add a second row for the same prayer with
 `season_from` / `season_to` (`MM-DD`), or for one day with `on_date` (`YYYY-MM-DD`). Those rows
 win over the base row (`isha-base`) in their dates. Commit, and phones pick it up within about
-five minutes of opening the app.
+five minutes of opening the app. Users who turned on notifications also get a push for the
+change when it takes effect within 14 days (see
+[Push notifications for iqamah changes](#push-notifications-for-iqamah-changes)).
 
 Every value the scripts print in the Actions log is JSON-escaped and shortened, so text in
 `content.json` can never inject workflow commands (`::add-mask::`, `::warning::`, ...).
@@ -104,8 +106,9 @@ read-only (`contents: read`).
 
 ### The send ledger
 
-The ledger is a small JSON file (`fcm-ledger/sent.json`: `"<id>|<topic>": "<time sent>"`) kept
-in the GitHub Actions cache. Each live run restores the newest copy, adds what it sent and saves a
+The ledger is a small JSON file (`fcm-ledger/sent.json`: `"<id>|<topic>": "<time sent>"`, plus
+the iqamah keys described [below](#push-notifications-for-iqamah-changes)) kept in the GitHub
+Actions cache. Each live run restores the newest copy, adds what it sent and saves a
 new copy (entries older than 180 days are dropped). Push jobs run one at a time across all
 commits, so two runs never use the ledger at once; if several pushes queue up, GitHub keeps only
 the newest waiting run, which sends everything the skipped ones would have.
@@ -141,12 +144,13 @@ notification channel.
 
 - On GitHub: **Actions > Content > Run workflow**, keep **Dry run** ticked. The log of the
   **push** job prints the exact messages a live run would send now (it reads the current send
-  ledger but never saves it; **before** matters only if there is no ledger). No secret is used,
+  ledger but never saves it; **before** matters only if there is no ledger, or for iqamah rules
+  if the ledger has no iqamah entries yet). No secret is used,
   nothing is sent and nothing is waited for. Unticking **Dry run** on `main` sends for real.
 - Locally (Node 20 or newer, no `npm install` needed):
 
   ```sh
-  node --test .github/scripts/send-push.test.mjs .github/scripts/send-push.hardening.test.mjs .github/scripts/validate-content.test.mjs
+  node --test .github/scripts/*.test.mjs
   node .github/scripts/validate-content.mjs
   BEFORE_SHA=HEAD~1 DRY_RUN=1 node .github/scripts/send-push.mjs
   ```
@@ -185,3 +189,83 @@ notification channel.
   new (if its `published_at` is recent).
 - The wait for the public file checks for the ids only, not for later edits to their text.
 - Invalid `content.json` at the pushed commit fails the run and sends nothing.
+
+## Push notifications for iqamah changes
+
+The same **push** job (same safety rules: only after **validate** passes, only on `main` pushes
+and manual runs, dry run without the secret, 3 tries per message, failures fail the job) also
+announces changes to `iqamahRules`. Code: `.github/scripts/iqamah-push.mjs`.
+
+**What counts as a change.** Each rule row has a *value*: `prayer`, `rule_type`, then
+`fixed_time` (fixed) or `minutes`/`round`/`not_before`/`not_after` (offset), and
+`season_from`/`season_to`/`on_date`. A row whose value differs from the last value handled for it
+is a change, and so is a new row. Editing only `updated_at`, `mosque_id`, the order of rows, or a
+column the rule type ignores (e.g. `minutes` on a fixed rule) is not. Deleting a row sends nothing.
+
+**When it is announced** (dates in Europe/Rome):
+
+- a base row (`<prayer>-base`, no season or date): always. If a season row of that prayer is
+  active today, the text says from which day the new value applies (the day after the season).
+- `default` row: always, naming the prayers that have no base row of their own; if every prayer
+  has one, the default is not used and nothing is sent.
+- `on_date` row: when the day is today or within the next 14 days.
+- season row: when the season is active today or starts within the next 14 days.
+
+A change outside that window (a typo fixed in a season months away, a past `on_date`) is recorded
+as handled without a message, and is not announced later either. Commit such a change again
+(with a different value) closer to the date if users should be told.
+
+**The message**: one per changed row and language, to the same topics and channel as
+announcements (`announcements-ar/-it/-en`, Android channel `announcements`), data
+`{screen: "prayers"}`, Android tag `iqamah-<row id>-<value hash>`. Examples (English):
+
+| Row | Title | Body |
+| --- | --- | --- |
+| `fajr-base` fixed `05:50` | Fajr iqamah changed | Fajr iqamah is now 05:50 |
+| `isha-base` offset 5, round 15 | Isha iqamah changed | Isha iqamah is now adhan + 5 min, rounded to 15 min |
+| season `11-01`..`02-28` (starts soon) | Fajr iqamah changed | From 1 Nov to 28 Feb, Fajr iqamah is 06:15 |
+| season active today | Isha iqamah changed | Until 15 Nov, Isha iqamah is adhan + 10 min |
+| `on_date` `2026-11-08` | Fajr iqamah changed | On 8 Nov, Fajr iqamah is 06:00 |
+
+Arabic and Italian say the same (e.g. "تغيير موعد إقامة الفجر" / "أصبحت إقامة الفجر الساعة
+05:50"; "Nuovo orario dell'iqāmah del Fajr" / "L'iqāmah del Fajr ora è alle 05:50"), with month
+names in the language. For an offset rule the workflow cannot know the adhan time (the app
+calculates it), so the text gives the rule ("adhan + 5 min"), not a clock time.
+
+**Ledger keys.** For each row and topic the ledger holds one key,
+`iqamah:<prayer>:<row id>:<value hash>|<topic>` (the hash is 16 hex characters of SHA-256 of the
+value). It records the last value handled for that row. Sending (or recording without a message)
+a new value replaces the row's previous key, so:
+
+- the same change is never sent twice: a re-run, a manual run, or a later unrelated push finds
+  the key and skips it; a topic that failed is retried by the next run (only that topic);
+- a revert works: 05:45 -> 05:50 -> 05:45 -> 05:50 announces every step, because each step
+  differs from the value recorded just before it;
+- the key contains `:`, which an announcement id cannot, so it never collides with an
+  announcement key;
+- every live run refreshes the keys of the current rows, so an unchanged rule never ages out of
+  the 180-day ledger (and so is never re-announced).
+
+Because the ledger, not the git diff, decides, a fix-forward works as for announcements: a rule
+change in a commit that failed validation is announced by the commit that fixes it.
+
+**Cold start.** If the ledger has no iqamah key (no ledger at all, or the first run after this
+feature was added), the rules at the previous commit (`BEFORE_SHA`) are recorded as handled first,
+so only what this push changed is announced. Without a usable previous commit, the current rules
+are recorded and nothing is sent.
+
+**Waiting for the public file.** Before sending, the job waits (as for announcements, up to
+6 minutes) until the public `content.json` shows each changed row with its new value, so a phone
+that opens the app on the notification already sees the new iqamah.
+
+**Limits.**
+
+- Nothing runs on a timer: a season row edited weeks ahead is not announced when it starts.
+- Deleting a row (for example ending a season early or removing a one-day override) sends nothing.
+- Two changed rows of the same prayer in one push send two notifications.
+- A base-row change says "is now" even if an `on_date` override of that prayer applies today
+  (only active seasons are taken into account).
+- A dry run with no ledger (locally, or on GitHub after the cache was evicted) uses `BEFORE_SHA`
+  as the baseline, so it shows what changed since that commit.
+- The app opens on a tap; whether it goes to the prayer screen depends on the app handling
+  `data.screen == "prayers"`.

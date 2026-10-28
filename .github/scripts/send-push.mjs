@@ -12,8 +12,15 @@
 // then the rules above apply. With no usable BEFORE_SHA either, every current announcement is
 // recorded and nothing is sent.
 //
+// It also announces iqamah rule changes that take effect within 14 days (one message per
+// language topic per changed rule row, data {screen: "prayers"}); see iqamah-push.mjs. Their
+// ledger keys are "iqamah:<prayer>:<row id>:<value hash>|<topic>", one per row and topic, holding
+// the last value handled. With no iqamah key in the ledger yet, the rules at BEFORE_SHA are
+// recorded as handled first (or, without BEFORE_SHA, the current rules: nothing is sent).
+//
 // Before sending, the script waits (up to PUBLISH_WAIT_MS) until the public content.json that
-// the app downloads lists every id about to be sent, so a tap on the notification finds it.
+// the app downloads lists every id about to be sent (and every changed iqamah rule with its new
+// value), so a tap on the notification finds it.
 //
 // Dependency-free: Node >= 20 built-ins only (crypto for the RS256 JWT, global fetch).
 //
@@ -42,6 +49,7 @@ import {
   parseStrictDate,
   validateText,
 } from './validate-content.mjs';
+import { hasIqamahEntries, IQAMAH_WINDOW_DAYS, iqamahText, planIqamah, recordRule, ruleRows, valueHash } from './iqamah-push.mjs';
 
 export const BODY_MAX_CHARS = 140;
 export const TITLE_MAX_CHARS = 65;
@@ -120,8 +128,29 @@ export function buildMessages(a) {
   }));
 }
 
+/**
+ * One FCM v1 message per language topic for a changed iqamah rule (see iqamah-push.mjs).
+ * The Android tag names the row and the new value, so a duplicate delivery of the same change
+ * replaces its tray entry, while a different change never hides an earlier one.
+ */
+export function buildIqamahMessages(change) {
+  const { row, hash, timing } = change;
+  return LANGS.map((lang) => {
+    const { title, body } = iqamahText(lang, row, timing);
+    return {
+      topic: `announcements-${lang}`,
+      notification: { title: truncate(title, TITLE_MAX_CHARS), body: truncate(body, BODY_MAX_CHARS) },
+      android: {
+        priority: 'HIGH',
+        notification: { channel_id: 'announcements', tag: `iqamah-${row.id}-${hash}` },
+      },
+      data: { screen: 'prayers' },
+    };
+  });
+}
+
 export const ledgerKey = (id, topic) => `${id}|${topic}`;
-const TOPICS = LANGS.map((l) => `announcements-${l}`);
+export const TOPICS = LANGS.map((l) => `announcements-${l}`);
 
 /**
  * What to send now: one message per topic for every announcement with a valid id that is
@@ -220,7 +249,8 @@ const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
  * Polls the public content.json (the URL the app downloads, so the check sees what a phone
- * sees, CDN cache included) until it lists every id in `ids`. Returns true when it does, false
+ * sees, CDN cache included) until it lists every announcement id in `ids` and every iqamah rule
+ * in `rules` ({id, hash}) with its new value (same valueHash). Returns true when it does, false
  * after `timeoutMs` (a warning is logged; the caller sends anyway).
  */
 export async function waitForContent(ids, {
@@ -231,9 +261,11 @@ export async function waitForContent(ids, {
   sleep = delay,
   clock = Date.now,
   log = console.log,
+  rules = [],
 } = {}) {
   const wanted = [...new Set(ids)];
-  if (wanted.length === 0) return true;
+  const wantedRules = [...new Map(rules.map((r) => [`${r.id}|${r.hash}`, r])).values()];
+  if (wanted.length === 0 && wantedRules.length === 0) return true;
   const deadline = clock() + timeoutMs;
   let missing = wanted;
   let last = '';
@@ -245,7 +277,13 @@ export async function waitForContent(ids, {
         const data = JSON.parse(await res.text());
         const have = new Set((Array.isArray(data?.announcements) ? data.announcements : []).map((a) => a?.id));
         missing = wanted.filter((id) => !have.has(id));
-        last = missing.length ? `missing ${missing.map((id) => logSafe(id)).join(', ')}` : '';
+        const haveRules = new Set(ruleRows(data).map((r) => `${r.id}|${valueHash(r)}`));
+        const oldRules = wantedRules.filter((r) => !haveRules.has(`${r.id}|${r.hash}`));
+        const what = [
+          ...missing.map((id) => logSafe(id)),
+          ...oldRules.map((r) => `iqamah rule ${logSafe(r.id)} (old value)`),
+        ];
+        last = what.length ? `missing ${what.join(', ')}` : '';
       } else {
         last = `HTTP ${res.status}`;
       }
@@ -253,7 +291,7 @@ export async function waitForContent(ids, {
       last = `request failed: ${logSafe(err?.message, 120)}`;
     }
     if (last === '') {
-      log(`Public content.json lists all ${wanted.length} announcement(s) to send (check ${attempt}).`);
+      log(`Public content.json lists all ${wanted.length} announcement(s) and ${wantedRules.length} iqamah rule(s) to send (check ${attempt}).`);
       return true;
     }
     if (clock() + intervalMs > deadline) {
@@ -314,12 +352,17 @@ export async function run({
   serviceAccountJson,
   fetchImpl = globalThis.fetch,
   ledger = new Set(),
+  ledgerTimes = new Map(),
   onSent = () => {},
   onSeeded = () => {},
   waitForPublish = async () => true,
   log = console.log,
   retryDelayMs,
 }) {
+  // Iqamah rules start cold on their own when the ledger has no iqamah key yet (first run after
+  // this feature, or after a full cold start); `previous` is then their baseline.
+  const iqamahCold = coldStart || !hasIqamahEntries(ledger);
+  let seededAnnouncements = false;
   if (coldStart) {
     const ids = coldStartIds(previous, current);
     for (const id of ids) for (const topic of TOPICS) ledger.add(ledgerKey(id, topic));
@@ -328,7 +371,7 @@ export async function run({
         ? warning(`No send ledger and no previous commit: recording all ${ids.length} current announcement(s) as handled, sending nothing.`)
         : `No send ledger (first run or cache evicted): recording the ${ids.length} announcement(s) of the previous commit as handled.`,
     );
-    if (ids.length) onSeeded(ledger);
+    seededAnnouncements = ids.length > 0;
   }
 
   const plan = planMessages(current, now, log);
@@ -337,23 +380,49 @@ export async function run({
     const done = ledger.has(ledgerKey(id, message.topic));
     if (done) log(`  skip "${id}" -> ${message.topic}: already in the send ledger`);
     return !done;
-  });
-  const result = { planned: plan.messages, todo, sent: [], failed: [] };
+  }).map((t) => ({ ...t, record: () => ledger.add(ledgerKey(t.id, t.message.topic)) }));
+
+  // Iqamah rule changes (iqamah-push.mjs): rows whose value is not the one the ledger recorded.
+  const iq = planIqamah({ current, previous, ledger, times: ledgerTimes, now, topics: TOPICS, coldStart: iqamahCold });
+  if (iqamahCold) {
+    log(
+      previous === null
+        ? `No iqamah entries in the send ledger and no previous commit: recording the ${iq.seeded} current iqamah rule(s) as handled.`
+        : `No iqamah entries in the send ledger: recording the ${iq.seeded} iqamah rule(s) of the previous commit as handled.`,
+    );
+  }
+  for (const s of iq.silent) log(`  iqamah rule ${logSafe(s.row.id)} changed, not announced: ${s.reason} (window ${iq.today} + ${IQAMAH_WINDOW_DAYS} days)`);
+  log(`Iqamah rules changed and taking effect soon: ${iq.changes.length} (${iq.changes.map((c) => `${c.row.id}: ${c.timing.reason}`).join(', ') || 'none'})`);
+  const rules = [];
+  for (const change of iq.changes) {
+    const id = `iqamah:${change.row.id}`;
+    rules.push({ id: change.row.id, hash: change.hash });
+    for (const message of buildIqamahMessages(change)) {
+      if (!change.topics.includes(message.topic)) continue;
+      todo.push({ id, message, record: () => recordRule(ledger, ledgerTimes, change.row, change.hash, [message.topic]) });
+    }
+  }
+  // Save what was recorded without sending: cold-start announcements, and iqamah values (the
+  // planner records or refreshes every current rule row, so unchanged rows never age out).
+  if (seededAnnouncements || iq.seeded > 0 || ruleRows(current).length > 0) onSeeded(ledger);
+
+  const result = { planned: plan.messages, todo, sent: [], failed: [], iqamah: iq };
   if (todo.length === 0) {
     log('Nothing to send.');
     return result;
   }
-  const ids = [...new Set(todo.map((t) => t.id))];
+  const ids = [...new Set(todo.filter((t) => !t.id.startsWith('iqamah:')).map((t) => t.id))];
   if (dryRun) {
-    log(`DRY RUN: ${todo.length} message(s) would be sent (after waiting for the public content.json to list ${ids.join(', ')}):`);
+    const waitFor = [...ids, ...rules.map((r) => `iqamah rule ${r.id} = ${r.hash}`)];
+    log(`DRY RUN: ${todo.length} message(s) would be sent (after waiting for the public content.json to list ${waitFor.join(', ')}):`);
     for (const { message } of todo) log(escapeInvisible(JSON.stringify({ message }, null, 2)));
     return result;
   }
   const sa = parseServiceAccount(serviceAccountJson);
-  await waitForPublish(ids);
+  await waitForPublish(ids, rules);
   const token = await getAccessToken(sa, { fetchImpl });
   if (process.env.GITHUB_ACTIONS) console.log(`::add-mask::${token}`);
-  for (const { id, message } of todo) {
+  for (const { id, message, record } of todo) {
     let name;
     try {
       name = await sendMessage(sa.project_id, token, message, { fetchImpl, retryDelayMs });
@@ -362,7 +431,7 @@ export async function run({
       log(`  FAILED "${id}" -> ${message.topic}: ${escapeInvisible(err.message)}`);
       continue;
     }
-    ledger.add(ledgerKey(id, message.topic));
+    record();
     result.sent.push({ id, topic: message.topic, name });
     log(`  sent "${id}" -> ${message.topic} ${logSafe(name, 120)}`);
     try {
@@ -470,7 +539,9 @@ async function main() {
 
   const ledgerPath = env.FCM_LEDGER_PATH || '';
   const { keys: ledger, times, cold } = readLedger(ledgerPath, now);
-  const previous = cold ? loadPrevious(env.BEFORE_SHA, path) : null;
+  // The previous commit is the baseline of a cold start, for announcements (no ledger) and for
+  // iqamah rules (no iqamah key in the ledger yet).
+  const previous = cold || !hasIqamahEntries(ledger) ? loadPrevious(env.BEFORE_SHA, path) : null;
   const persist = dryRun || !ledgerPath ? () => {} : (l) => writeLedger(ledgerPath, l, times, new Date());
   persist(ledger); // always leave a file for the cache step
 
@@ -486,9 +557,10 @@ async function main() {
     dryRun,
     serviceAccountJson: env.FCM_SERVICE_ACCOUNT_JSON,
     ledger,
+    ledgerTimes: times,
     onSent: persist,
     onSeeded: persist,
-    waitForPublish: waitMs === 0 ? async () => true : (ids) => waitForContent(ids, { url, timeoutMs: waitMs }),
+    waitForPublish: waitMs === 0 ? async () => true : (ids, rules) => waitForContent(ids, { url, timeoutMs: waitMs, rules }),
   });
   if (result.failed.length) {
     for (const f of result.failed) console.error(`::error::${escapeCommandData(`"${f.id}" -> ${f.topic}: ${escapeInvisible(f.error)}`)}`);

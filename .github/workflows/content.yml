@@ -3,7 +3,8 @@ name: Content
 # validate: on every PR and push that touches content or these scripts.
 # push:     after validate passes, on pushes to main (and manual runs) sends an FCM
 #           notification for each active announcement published in the last 48 h that the
-#           send ledger has not recorded yet. See README.md.
+#           send ledger has not recorded yet, and one for each iqamah rule change that takes
+#           effect within 14 days. See README.md.
 
 on:
   push:
@@ -24,7 +25,7 @@ on:
         type: boolean
         default: true
       before:
-        description: Commit used only when the send ledger is missing (default = parent of the current commit)
+        description: Commit used only when the send ledger is missing or has no iqamah entries (default = parent of the current commit)
         type: string
         required: false
         default: ''
@@ -48,6 +49,7 @@ jobs:
           node --test
           .github/scripts/send-push.test.mjs
           .github/scripts/send-push.hardening.test.mjs
+          .github/scripts/iqamah-push.test.mjs
           .github/scripts/validate-content.test.mjs
       - name: Validate content.json
         run: node .github/scripts/validate-content.mjs content.json
