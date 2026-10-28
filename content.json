@@ -58,21 +58,6 @@
       "starts_at": "2026-08-01T00:00:00.000Z",
       "expires_at": null,
       "published_at": "2026-08-01T00:00:00.000Z"
-    },
-    {
-      "updated_at": "2026-10-28T13:55:11.000Z",
-      "id": "push-test-build5",
-      "mosque_id": "azzaituna",
-      "title_ar": "اختبار الإشعارات",
-      "title_it": "Prova notifiche",
-      "title_en": "Notification test",
-      "body_ar": "هذا اختبار لإشعارات التطبيق. يمكنك تجاهله.",
-      "body_it": "Questa è una prova delle notifiche dell'app. Puoi ignorarla.",
-      "body_en": "This is a test of the app notifications. You can ignore it.",
-      "priority": "normal",
-      "starts_at": "2026-10-28T13:54:11.000Z",
-      "expires_at": null,
-      "published_at": "2026-10-28T13:54:11.000Z"
     }
   ],
   "adhkar": [
