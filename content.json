@@ -27,6 +27,24 @@
   ],
   "announcements": [
     {
+      "updated_at": "2026-10-31T18:37:00.000Z",
+      "id": "annual-conference-2026",
+      "mosque_id": "azzaituna",
+      "title_ar": "يسرّنا دعوتكم لحضور المؤتمر السنوي لمسلمي ترتينو – إيطاليا",
+      "title_it": "يسرّنا دعوتكم لحضور المؤتمر السنوي لمسلمي ترتينو – إيطاليا",
+      "title_en": "يسرّنا دعوتكم لحضور المؤتمر السنوي لمسلمي ترتينو – إيطاليا",
+      "body_ar": "الأحد 8 نوفمبر 2026، الساعة 15:00.",
+      "body_it": "الأحد 8 نوفمبر 2026، الساعة 15:00.",
+      "body_en": "الأحد 8 نوفمبر 2026، الساعة 15:00.",
+      "priority": "normal",
+      "starts_at": "2026-10-31T18:37:00.000Z",
+      "expires_at": "2026-11-08T23:00:00.000Z",
+      "published_at": "2026-10-31T18:37:00.000Z",
+      "image_url": "https://raw.githubusercontent.com/AnasOsman1/azzaituna-content/main/images/annual-conference-2026.jpg",
+      "image_width": 1024,
+      "image_height": 1536
+    },
+    {
       "updated_at": "2026-10-31T15:30:00.000Z",
       "id": "winter-class-schedule",
       "mosque_id": "azzaituna",
