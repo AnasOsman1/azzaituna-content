@@ -27,6 +27,24 @@
   ],
   "announcements": [
     {
+      "updated_at": "2026-10-31T15:30:00.000Z",
+      "id": "winter-class-schedule",
+      "mosque_id": "azzaituna",
+      "title_ar": "جدول الحصص الدراسية الشتوي",
+      "title_it": "جدول الحصص الدراسية الشتوي",
+      "title_en": "جدول الحصص الدراسية الشتوي",
+      "body_ar": "يوم السبت. التفاصيل في الملصق.",
+      "body_it": "يوم السبت. التفاصيل في الملصق.",
+      "body_en": "يوم السبت. التفاصيل في الملصق.",
+      "priority": "normal",
+      "starts_at": "2026-10-31T15:30:00.000Z",
+      "expires_at": null,
+      "published_at": "2026-10-31T15:30:00.000Z",
+      "image_url": "https://raw.githubusercontent.com/AnasOsman1/azzaituna-content/main/images/winter-class-schedule.jpg",
+      "image_width": 1080,
+      "image_height": 1526
+    },
+    {
       "updated_at": "2026-10-30T16:10:00.000Z",
       "id": "thank-you-testers",
       "mosque_id": "azzaituna",
