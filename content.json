@@ -1,12 +1,12 @@
 {
   "lessons": [
     {
-      "updated_at": "2026-11-01T14:12:51.965Z",
+      "updated_at": "2026-11-01T14:32:00.517Z",
       "id": "tafsir-after-fajr-weekly",
       "mosque_id": "azzaituna",
-      "topic_ar": "درس التفسير اليومي",
-      "topic_it": "Lezione quotidiana di tafsīr",
-      "topic_en": "Daily tafsīr lesson",
+      "topic_ar": "درس التفسير اليومي – سورة الزخرف",
+      "topic_it": "Lezione quotidiana di tafsīr – Sura Az-Zukhruf",
+      "topic_en": "Daily tafsīr lesson – Surah Az-Zukhruf",
       "teacher_ar": "الشيخ عبده محمد الدغار",
       "teacher_it": "Shaykh Abdo Mohamed Aldaghar",
       "teacher_en": "Shaykh Abdo Mohamed Aldaghar",
@@ -22,10 +22,7 @@
         6
       ],
       "after_prayer": "fajr",
-      "sort": 1,
-      "detail_ar": "سورة الزخرف",
-      "detail_it": "Sura Az-Zukhruf",
-      "detail_en": "Surah Az-Zukhruf"
+      "sort": 1
     },
     {
       "updated_at": "2026-11-01T00:00:00.000Z",
