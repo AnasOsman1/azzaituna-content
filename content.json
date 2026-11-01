@@ -1,7 +1,7 @@
 {
   "lessons": [
     {
-      "updated_at": "2026-11-01T00:00:00.000Z",
+      "updated_at": "2026-11-01T14:12:51.965Z",
       "id": "tafsir-after-fajr-weekly",
       "mosque_id": "azzaituna",
       "topic_ar": "درس التفسير اليومي",
@@ -22,7 +22,10 @@
         6
       ],
       "after_prayer": "fajr",
-      "sort": 1
+      "sort": 1,
+      "detail_ar": "سورة الزخرف",
+      "detail_it": "Sura Az-Zukhruf",
+      "detail_en": "Surah Az-Zukhruf"
     },
     {
       "updated_at": "2026-11-01T00:00:00.000Z",
