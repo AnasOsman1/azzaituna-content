@@ -201,6 +201,7 @@ const SORT_LIMIT = 1_000_000;
 
 const LESSON_KINDS = ['lesson', 'school', 'special'];
 const CANCELLED_MAX = 100;
+const DETAIL_MAX = 80;
 
 /** True when the optional column is present and not null. */
 const given = (c, row, k) => c.has(k) && row[k] !== null;
@@ -212,6 +213,9 @@ function checkLesson(c, row) {
     const keys = LANGS.map((l) => `${base}_${l}`);
     if (keys.some((k) => given(c, row, k))) keys.forEach((k) => c.text(k));
   }
+  // A one-line detail under the title (e.g. the surah being read): all three languages, or none.
+  const detailKeys = LANGS.map((l) => `detail_${l}`);
+  if (detailKeys.some((k) => given(c, row, k))) detailKeys.forEach((k) => c.text(k, { max: DETAIL_MAX }));
   c.date('starts_at', { nullable: true });
   c.field('weekly_days', (v) => {
     if (v === null) return null;

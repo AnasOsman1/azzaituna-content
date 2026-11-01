@@ -385,6 +385,14 @@ test('lessons: a teacher or place is given in all three languages or none', () =
   bad(content({ lessons: [school({ location_ar: 'القاعة', location_it: 'Aula', location_en: null })] }), /"location_en" must be a string/);
 });
 
+test('lessons: a detail line is given in all three languages or none, at most 80 characters', () => {
+  ok(content({ lessons: [lesson({ detail_ar: 'سورة البقرة', detail_it: 'Sura Al-Baqara', detail_en: 'Surah Al-Baqarah' })] }));
+  ok(content({ lessons: [lesson({ detail_ar: null, detail_it: null, detail_en: null })] }));
+  bad(content({ lessons: [lesson({ detail_ar: 'سورة البقرة' })] }), /"detail_it" is missing/);
+  bad(content({ lessons: [lesson({ detail_ar: 'x', detail_it: 'x', detail_en: 'x'.repeat(81) })] }), /"detail_en" is 81 characters/);
+  bad(content({ lessons: [lesson({ detail_ar: 'x', detail_it: ' ', detail_en: 'x' })] }), /"detail_it" must not be empty/);
+});
+
 // ---------------------------------------------------------------- adhkar, iqamah, jumu'ah
 
 test('adhkar: collection, texts, repetitions, sort', () => {

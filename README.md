@@ -40,7 +40,9 @@ cannot read is dropped silently, and some mistakes (a `null` row, a missing date
   `YYYY-MM-DD`, or the older `starts_at` date-time). It starts after a prayer
   (`after_prayer`) **or** at a clock time (`at`, `HH:MM`, optional `until` later than it),
   never both. Optional: `kind` (`lesson`, `school`, `special`; default `lesson`),
-  `cancelled_dates` (list of `YYYY-MM-DD`), `announcement_id` (an announcement's `id`; tapping
+  `detail_*` (a one-line detail under the title, all three languages or none, at most 80
+  characters; the Pi display keeps the tafsir lesson's surah there), `cancelled_dates` (list of
+  `YYYY-MM-DD`), `announcement_id` (an announcement's `id`; tapping
   the card opens it). `sort` is an integer. Rows with `at` or `on_date` are shown only by app
   builds with the week planner (older builds leave them out).
 - **adhkar**: `collection` is `morning`, `evening` or `general`; `arabic`, `translation_*` and
