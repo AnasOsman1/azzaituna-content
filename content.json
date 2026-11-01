@@ -1,12 +1,12 @@
 {
   "lessons": [
     {
-      "updated_at": "2026-10-26T00:00:00.000Z",
+      "updated_at": "2026-11-01T00:00:00.000Z",
       "id": "tafsir-after-fajr-weekly",
       "mosque_id": "azzaituna",
-      "topic_ar": "درس التفسير الأسبوعي",
-      "topic_it": "Lezione settimanale di tafsīr",
-      "topic_en": "Weekly tafsīr lesson",
+      "topic_ar": "درس التفسير اليومي",
+      "topic_it": "Lezione quotidiana di tafsīr",
+      "topic_en": "Daily tafsīr lesson",
       "teacher_ar": "الشيخ عبده محمد الدغار",
       "teacher_it": "Shaykh Abdo Mohamed Aldaghar",
       "teacher_en": "Shaykh Abdo Mohamed Aldaghar",
