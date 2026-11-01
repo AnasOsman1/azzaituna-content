@@ -29,9 +29,12 @@
       "id": "school-saturday-morning",
       "mosque_id": "azzaituna",
       "kind": "school",
-      "topic_ar": "مدرسة الزيتونة · الحصة الصباحية",
-      "topic_it": "مدرسة الزيتونة · الحصة الصباحية",
-      "topic_en": "مدرسة الزيتونة · الحصة الصباحية",
+      "topic_ar": "مدرسة الزيتونة",
+      "topic_it": "مدرسة الزيتونة",
+      "topic_en": "مدرسة الزيتونة",
+      "detail_ar": "الحصة الصباحية",
+      "detail_it": "الحصة الصباحية",
+      "detail_en": "الحصة الصباحية",
       "starts_at": null,
       "weekly_days": [
         6
@@ -47,9 +50,12 @@
       "id": "school-saturday-evening",
       "mosque_id": "azzaituna",
       "kind": "school",
-      "topic_ar": "مدرسة الزيتونة · الحصة المسائية",
-      "topic_it": "مدرسة الزيتونة · الحصة المسائية",
-      "topic_en": "مدرسة الزيتونة · الحصة المسائية",
+      "topic_ar": "مدرسة الزيتونة",
+      "topic_it": "مدرسة الزيتونة",
+      "topic_en": "مدرسة الزيتونة",
+      "detail_ar": "الحصة المسائية",
+      "detail_it": "الحصة المسائية",
+      "detail_en": "الحصة المسائية",
       "starts_at": null,
       "weekly_days": [
         6
