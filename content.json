@@ -25,16 +25,16 @@
       "sort": 1
     },
     {
-      "updated_at": "2026-11-01T00:00:00.000Z",
+      "updated_at": "2026-11-01T14:46:55.000Z",
       "id": "school-saturday-morning",
       "mosque_id": "azzaituna",
       "kind": "school",
       "topic_ar": "مدرسة الزيتونة",
-      "topic_it": "مدرسة الزيتونة",
-      "topic_en": "مدرسة الزيتونة",
+      "topic_it": "Scuola Azzaituna",
+      "topic_en": "Azzaituna School",
       "detail_ar": "الحصة الصباحية",
-      "detail_it": "الحصة الصباحية",
-      "detail_en": "الحصة الصباحية",
+      "detail_it": "Sessione del mattino",
+      "detail_en": "Morning session",
       "starts_at": null,
       "weekly_days": [
         6
@@ -46,16 +46,16 @@
       "sort": 2
     },
     {
-      "updated_at": "2026-11-01T00:00:00.000Z",
+      "updated_at": "2026-11-01T14:46:55.000Z",
       "id": "school-saturday-evening",
       "mosque_id": "azzaituna",
       "kind": "school",
       "topic_ar": "مدرسة الزيتونة",
-      "topic_it": "مدرسة الزيتونة",
-      "topic_en": "مدرسة الزيتونة",
+      "topic_it": "Scuola Azzaituna",
+      "topic_en": "Azzaituna School",
       "detail_ar": "الحصة المسائية",
-      "detail_it": "الحصة المسائية",
-      "detail_en": "الحصة المسائية",
+      "detail_it": "Sessione del pomeriggio",
+      "detail_en": "Afternoon session",
       "starts_at": null,
       "weekly_days": [
         6
