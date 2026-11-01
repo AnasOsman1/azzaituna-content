@@ -33,11 +33,16 @@ cannot read is dropped silently, and some mistakes (a `null` row, a missing date
   or `.`/`..` segments. With an `image_url`, `image_width` and `image_height` are both required:
   whole numbers from 1 to 8000 whose ratio is between 1:4 and 4:1. Without one, both must be
   absent or `null`.
-- **lessons**: `topic_*`, `teacher_*`, `location_*` non-empty in all three languages; the keys
-  `starts_at` (`null` or a date-time), `weekly_days` (`null` or a list of 1-7 weekdays, 0 =
-  Sunday) and `after_prayer` (`null` or `fajr`/`dhuhr`/`asr`/`maghrib`/`isha`) must all be
-  present; `weekly_days` and `after_prayer` are set together; a lesson needs `starts_at` or a
-  weekly schedule; `sort` is an integer.
+- **lessons**: `topic_*` non-empty in all three languages; `teacher_*` and `location_*`
+  either all three non-empty or all three absent/`null`. The keys `starts_at`, `weekly_days`
+  and `after_prayer` must be present (`null` where unused). An event is **weekly**
+  (`weekly_days`, a list of 1-7 weekdays, 0 = Sunday) or **one-off** (`on_date`,
+  `YYYY-MM-DD`, or the older `starts_at` date-time). It starts after a prayer
+  (`after_prayer`) **or** at a clock time (`at`, `HH:MM`, optional `until` later than it),
+  never both. Optional: `kind` (`lesson`, `school`, `special`; default `lesson`),
+  `cancelled_dates` (list of `YYYY-MM-DD`), `announcement_id` (an announcement's `id`; tapping
+  the card opens it). `sort` is an integer. Rows with `at` or `on_date` are shown only by app
+  builds with the week planner (older builds leave them out).
 - **adhkar**: `collection` is `morning`, `evening` or `general`; `arabic`, `translation_*` and
   `source` non-empty; `repetitions` a whole number of at least 1; `sort` an integer.
 - **iqamahRules**: every column present (`null` where unused). `prayer` is `default` or a prayer

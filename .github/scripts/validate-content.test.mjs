@@ -342,12 +342,47 @@ test('lessons: starts_at/weekly_days/after_prayer keys required, a schedule is r
   delete noKey.starts_at;
   bad(content({ lessons: [noKey] }), /"starts_at" is missing/);
   bad(content({ lessons: [lesson({ after_prayer: 'noon' })] }), /"after_prayer"/);
-  bad(content({ lessons: [lesson({ after_prayer: null })] }), /both be set or both be null/);
-  bad(content({ lessons: [lesson({ weekly_days: null, after_prayer: null })] }), /needs "starts_at" or/);
+  bad(content({ lessons: [lesson({ after_prayer: null })] }), /needs "after_prayer" or "at"/);
+  bad(content({ lessons: [lesson({ weekly_days: null, after_prayer: null })] }), /needs "starts_at", a weekly schedule/);
   ok(content({ lessons: [lesson({ weekly_days: null, after_prayer: null, starts_at: '2026-11-01T18:00:00+01:00' })] }));
   bad(content({ lessons: [lesson({ starts_at: '2026-11-01T18:00:00' })] }), /"starts_at" must be null or a date-time/);
   bad(content({ lessons: [lesson({ topic_en: '' })] }), /"topic_en" must not be empty/);
   bad(content({ lessons: [lesson({ sort: '1' })] }), /"sort" must be an integer/);
+});
+
+const school = (over = {}) => lesson({
+  id: 'school-saturday-morning', kind: 'school', after_prayer: null, weekly_days: [6], at: '09:15', until: '12:00',
+  announcement_id: 'welcome',
+  teacher_ar: undefined, teacher_it: undefined, teacher_en: undefined,
+  location_ar: undefined, location_it: undefined, location_en: undefined,
+  ...over,
+});
+
+test('lessons: a school class at set hours, without teacher or place, is valid', () => {
+  ok(content({ lessons: [school()] }));
+  ok(content({ lessons: [school({ teacher_ar: null, teacher_it: null, teacher_en: null, kind: null, until: null, announcement_id: null })] }));
+  ok(content({ lessons: [lesson({ id: 'special', kind: 'special', weekly_days: null, after_prayer: 'maghrib', on_date: '2026-11-07' })] }));
+  ok(content({ lessons: [school({ cancelled_dates: ['2026-12-26', '2026-12-27'] })] }));
+});
+
+test('lessons: planner columns are checked', () => {
+  bad(content({ lessons: [school({ kind: 'party' })] }), /"kind"/);
+  bad(content({ lessons: [school({ at: '9:15' })] }), /"at" must be/);
+  bad(content({ lessons: [school({ until: '09:00' })] }), /"until" must be later/);
+  bad(content({ lessons: [school({ at: null, until: '12:00' })] }), /"until" needs "at"|needs "after_prayer" or "at"/);
+  bad(content({ lessons: [school({ after_prayer: 'fajr' })] }), /"after_prayer" or "at", not both/);
+  bad(content({ lessons: [school({ on_date: '2026-11-07' })] }), /"weekly_days" or "on_date", not both/);
+  bad(content({ lessons: [lesson({ weekly_days: null, after_prayer: null, on_date: '2026-02-30', at: '10:00' })] }), /"on_date"/);
+  bad(content({ lessons: [lesson({ weekly_days: null, after_prayer: null, on_date: '2026-11-07', at: '10:00', starts_at: '2026-11-07T10:00:00Z' })] }), /must not also have "starts_at"/);
+  bad(content({ lessons: [school({ weekly_days: null })] }), /need "weekly_days" or "on_date"/);
+  bad(content({ lessons: [school({ cancelled_dates: ['2026-13-01'] })] }), /"cancelled_dates"/);
+  bad(content({ lessons: [school({ announcement_id: 'Bad Id' })] }), /"announcement_id" must be/);
+  bad(content({ lessons: [school({ announcement_id: 'nothing-here' })] }), /not the id of any announcement/);
+});
+
+test('lessons: a teacher or place is given in all three languages or none', () => {
+  bad(content({ lessons: [school({ teacher_ar: 'الشيخ' })] }), /"teacher_it" is missing/);
+  bad(content({ lessons: [school({ location_ar: 'القاعة', location_it: 'Aula', location_en: null })] }), /"location_en" must be a string/);
 });
 
 // ---------------------------------------------------------------- adhkar, iqamah, jumu'ah

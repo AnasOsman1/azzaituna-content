@@ -199,8 +199,19 @@ function rowChecker(errors, where, row) {
 
 const SORT_LIMIT = 1_000_000;
 
+const LESSON_KINDS = ['lesson', 'school', 'special'];
+const CANCELLED_MAX = 100;
+
+/** True when the optional column is present and not null. */
+const given = (c, row, k) => c.has(k) && row[k] !== null;
+
 function checkLesson(c, row) {
-  for (const base of ['topic', 'teacher', 'location']) for (const l of LANGS) c.text(`${base}_${l}`);
+  for (const l of LANGS) c.text(`topic_${l}`);
+  // A teacher or a place is given in all three languages, or left out (all absent or null).
+  for (const base of ['teacher', 'location']) {
+    const keys = LANGS.map((l) => `${base}_${l}`);
+    if (keys.some((k) => given(c, row, k))) keys.forEach((k) => c.text(k));
+  }
   c.date('starts_at', { nullable: true });
   c.field('weekly_days', (v) => {
     if (v === null) return null;
@@ -209,11 +220,40 @@ function checkLesson(c, row) {
   });
   c.oneOf('after_prayer', PRAYERS, { nullable: true });
   c.int('sort', -SORT_LIMIT, SORT_LIMIT);
-  if (c.has('weekly_days') && c.has('after_prayer') && (row.weekly_days === null) !== (row.after_prayer === null)) {
-    c.err('"weekly_days" and "after_prayer" must both be set or both be null');
+
+  // Optional planner columns (week planner builds; older builds leave rows that use them out).
+  if (given(c, row, 'kind')) c.oneOf('kind', LESSON_KINDS);
+  for (const k of ['at', 'until']) if (given(c, row, k)) c.pattern(k, WALL_CLOCK, 'a 24-hour time like 09:15');
+  if (given(c, row, 'on_date') && !isCalendarDay(row.on_date)) {
+    c.err(`"on_date" must be null or a real date like 2026-11-07 (got ${logSafe(row.on_date)})`);
   }
-  if (row.starts_at === null && (row.weekly_days === null || row.after_prayer === null)) {
-    c.err('needs "starts_at" or a weekly schedule ("weekly_days" and "after_prayer")');
+  if (given(c, row, 'cancelled_dates')) {
+    const v = row.cancelled_dates;
+    if (!Array.isArray(v) || v.length > CANCELLED_MAX || !v.every(isCalendarDay)) {
+      c.err(`"cancelled_dates" must be null or a list of at most ${CANCELLED_MAX} real dates like 2026-12-26 (got ${logSafe(v)})`);
+    }
+  }
+  if (given(c, row, 'announcement_id') && !(typeof row.announcement_id === 'string' && ID_PATTERN.test(row.announcement_id))) {
+    c.err(`"announcement_id" must be null or an announcement id (got ${logSafe(row.announcement_id)})`);
+  }
+
+  if (!c.has('weekly_days') || !c.has('after_prayer')) return;
+  const weekly = row.weekly_days !== null;
+  const oneOff = given(c, row, 'on_date');
+  const prayer = row.after_prayer !== null;
+  const clock = given(c, row, 'at');
+  if (weekly && oneOff) c.err('give "weekly_days" or "on_date", not both');
+  if (prayer && clock) c.err('give "after_prayer" or "at", not both');
+  if (given(c, row, 'until') && !clock) c.err('"until" needs "at"');
+  if (given(c, row, 'until') && clock && typeof row.until === 'string' && typeof row.at === 'string' && row.until <= row.at) {
+    c.err('"until" must be later than "at"');
+  }
+  if (weekly || oneOff) {
+    if (!prayer && !clock) c.err('a weekly or dated event needs "after_prayer" or "at"');
+    if (oneOff && row.starts_at !== null) c.err('a dated event ("on_date") must not also have "starts_at"');
+  } else {
+    if (prayer || clock) c.err('"after_prayer"/"at" need "weekly_days" or "on_date"');
+    if (row.starts_at === null) c.err('needs "starts_at", a weekly schedule ("weekly_days") or a date ("on_date")');
   }
 }
 
@@ -368,6 +408,15 @@ export function validateContent(data) {
       if (table === 'iqamahRules' && slot) {
         if (slots.has(slot)) c.err(`fills the same slot as iqamahRules[${slots.get(slot)}] (same prayer, season or date); the app keeps only one`);
         else slots.set(slot, i);
+      }
+    });
+  }
+
+  if (Array.isArray(data.lessons) && Array.isArray(data.announcements)) {
+    const annIds = new Set(data.announcements.map((a) => (isRecord(a) ? a.id : undefined)));
+    data.lessons.forEach((row, i) => {
+      if (isRecord(row) && typeof row.announcement_id === 'string' && !annIds.has(row.announcement_id)) {
+        errors.push(`lessons[${i}] (id ${logSafe(row.id)}): "announcement_id" ${logSafe(row.announcement_id)} is not the id of any announcement`);
       }
     });
   }

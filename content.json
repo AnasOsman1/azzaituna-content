@@ -23,6 +23,42 @@
       ],
       "after_prayer": "fajr",
       "sort": 1
+    },
+    {
+      "updated_at": "2026-11-01T00:00:00.000Z",
+      "id": "school-saturday-morning",
+      "mosque_id": "azzaituna",
+      "kind": "school",
+      "topic_ar": "الحصة الصباحية",
+      "topic_it": "الحصة الصباحية",
+      "topic_en": "الحصة الصباحية",
+      "starts_at": null,
+      "weekly_days": [
+        6
+      ],
+      "after_prayer": null,
+      "at": "09:15",
+      "until": "12:00",
+      "announcement_id": "winter-class-schedule",
+      "sort": 2
+    },
+    {
+      "updated_at": "2026-11-01T00:00:00.000Z",
+      "id": "school-saturday-evening",
+      "mosque_id": "azzaituna",
+      "kind": "school",
+      "topic_ar": "الحصة المسائية",
+      "topic_it": "الحصة المسائية",
+      "topic_en": "الحصة المسائية",
+      "starts_at": null,
+      "weekly_days": [
+        6
+      ],
+      "after_prayer": null,
+      "at": "13:15",
+      "until": "16:00",
+      "announcement_id": "winter-class-schedule",
+      "sort": 3
     }
   ],
   "announcements": [
