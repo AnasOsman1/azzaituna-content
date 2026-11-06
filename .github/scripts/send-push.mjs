@@ -55,6 +55,12 @@ export const BODY_MAX_CHARS = 140;
 export const TITLE_MAX_CHARS = 65;
 export const RECENT_WINDOW_MS = 48 * 60 * 60 * 1000;
 export const LEDGER_KEEP_MS = 180 * 24 * 60 * 60 * 1000;
+// How long FCM keeps a message for a phone that is off or offline. Left unset it is 4 weeks, so a
+// phone back online after a month would receive every announcement and iqamah change it missed,
+// all stale. An announcement is only sent while it is recent (48 h), so it is kept as long as
+// that; an iqamah change is news for a day, after which the app shows the new time anyway.
+export const ANNOUNCEMENT_TTL = '172800s';
+export const IQAMAH_TTL = '86400s';
 export const CONTENT_RAW_URL = 'https://raw.githubusercontent.com/AnasOsman1/azzaituna-content/main/content.json';
 export const PUBLISH_WAIT_MS = 6 * 60 * 1000;
 export const PUBLISH_POLL_MS = 15 * 1000;
@@ -121,6 +127,7 @@ export function buildMessages(a) {
     },
     android: {
       priority: 'HIGH',
+      ttl: ANNOUNCEMENT_TTL,
       // Same tag => a duplicate delivery replaces the tray entry instead of adding a second one.
       notification: { channel_id: 'announcements', tag: `announcement-${a.id}` },
     },
@@ -142,6 +149,7 @@ export function buildIqamahMessages(change) {
       notification: { title: truncate(title, TITLE_MAX_CHARS), body: truncate(body, BODY_MAX_CHARS) },
       android: {
         priority: 'HIGH',
+        ttl: IQAMAH_TTL,
         notification: { channel_id: 'announcements', tag: `iqamah-${row.id}-${hash}` },
       },
       data: { screen: 'prayers' },

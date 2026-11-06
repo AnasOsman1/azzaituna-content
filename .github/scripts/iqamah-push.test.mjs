@@ -204,6 +204,7 @@ test('messages: one per language topic, channel announcements, unique tag per ch
     assert.equal(m.android.notification.tag, `iqamah-fajr-base-${valueHash(r)}`);
   }
   const other = rule('fajr-base', { fixed_time: '05:55' });
+  assert.ok(msgs.every((m) => m.android.ttl === '86400s')); // an iqamah change is news for a day
   assert.notEqual(buildIqamahMessages({ row: other, hash: valueHash(other), timing: timing(other, [other], '2026-10-28') })[0].android.notification.tag, msgs[0].android.notification.tag);
 });
 

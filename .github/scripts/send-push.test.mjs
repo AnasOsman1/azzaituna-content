@@ -127,6 +127,7 @@ test('buildMessages: one message per language topic with the right fields', () =
     assert.equal(m.notification.title, ann('x')[`title_${lang}`]);
     assert.equal(m.notification.body, ann('x')[`body_${lang}`]);
     assert.equal(m.android.priority, 'HIGH');
+    assert.equal(m.android.ttl, '172800s'); // kept 48 h for an offline phone, not FCM's default 4 weeks
     assert.equal(m.android.notification.channel_id, 'announcements'); // urgent uses the same channel
     assert.deepEqual(m.data, { screen: 'announcements', id: 'x' });
   }
