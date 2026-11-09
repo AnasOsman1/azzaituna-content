@@ -495,7 +495,7 @@
   ],
   "iqamahRules": [
     {
-      "updated_at": "2026-10-26T00:00:00.000Z",
+      "updated_at": "2026-11-09T00:00:00.000Z",
       "id": "fajr-base",
       "mosque_id": "azzaituna",
       "prayer": "fajr",
@@ -504,7 +504,7 @@
       "round": null,
       "not_before": null,
       "not_after": null,
-      "fixed_time": "05:45",
+      "fixed_time": "06:00",
       "season_from": null,
       "season_to": null,
       "on_date": null
